@@ -16,7 +16,28 @@ def frank_wolfe(
         solver: Optional[str] = None,
         verbose: bool = False
         ) -> Tuple[npt.NDArray[np.float64], float, int]:
+    """Run the Frank Wolfe algorithm to solve a convex constrained problem
     
+    See also https://en.wikipedia.org/wiki/Frank%E2%80%93Wolfe_algorithm
+
+    Args:
+        n (int): number of parameters
+        x0 (npt.NDArray[np.float64]): initial point
+        jac (Callable[[npt.NDArray[np.float64]], npt.NDArray[np.float64]]): Callback to compute the gradient. The callback should be
+            of the form fun(x) -> List[float]
+        build_constraints (Callable[[cp.Variable], List[Constraint]]): Callback to build the constraints. The callback
+            should accept an input that is the CVXPY variable to optimize, and should return a list of CVXPY constraints
+        max_iter (int, optional): Maximum number of iterations. Defaults to 1000.
+        rtol (float, optional): Relative tolerance for stopping the algorithm. Defaults to 1.e-5.
+        callback (Optional[Callable[[npt.NDArray[np.float64], npt.NDArray[np.float64], int ], bool]], optional): 
+            Optional callback of the form fun(x, xnext, k) -> bool, where x is the current point, xnext is the next point
+            and k is the current iteration. If the callback returns true, then the FW algorithm stops. Defaults to None.
+        solver (Optional[str], optional): Specify a CVXPY solver to use. Defaults to None.
+        verbose (bool, optional): enable verbosity of the solver. Defaults to False.
+
+    Returns:
+        Tuple[npt.NDArray[np.float64], float, int]: _description_
+    """    
     # Construct the Frank-Wolfe parametric problem
     x = cp.Variable(n)
     grad_f = cp.Parameter(n)

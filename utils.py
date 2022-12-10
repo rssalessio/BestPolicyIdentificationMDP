@@ -9,7 +9,7 @@ def policy_evaluation(
         R: NDArray[np.float64],
         pi: NDArray[np.int64],
         V0: Optional[NDArray[np.float64]] = None,
-        tol: float = 1e-6) -> NDArray[np.float64]:
+        atol: float = 1e-6) -> NDArray[np.float64]:
     """Policy evaluation
 
     Args:
@@ -18,7 +18,7 @@ def policy_evaluation(
         R (NDArray[np.float64]): Reward function of shape (num_states, num_actions)
         pi (Optional[NDArray[np.int64]], optional): policy
         V0 (Optional[NDArray[np.float64]], optional): Initial value function. Defaults to None.
-        tol (float): Tolerance
+        atol (float): Absolute tolerance
 
     Returns:
         NDArray[np.float64]: Value function
@@ -36,7 +36,7 @@ def policy_evaluation(
         Delta = np.max([Delta, np.abs(V_next - V).max()])
         V = V_next
         
-        if Delta < tol:
+        if Delta < atol:
             break
     return V
         
@@ -47,7 +47,7 @@ def policy_iteration(
         R: NDArray[np.float64],
         pi0: Optional[NDArray[np.int64]] = None,
         V0: Optional[NDArray[np.float64]] = None,
-        tol: float = 1e-6) -> Tuple[NDArray[np.float64], NDArray[np.float64]]:
+        atol: float = 1e-6) -> Tuple[NDArray[np.float64], NDArray[np.float64]]:
     """Policy iteration
 
     Args:
@@ -56,7 +56,7 @@ def policy_iteration(
         R (NDArray[np.float64]): Reward function of shape (num_states, num_actions)
         pi0 (Optional[NDArray[np.int64]], optional): Initial policy. Defaults to None.
         V0 (Optional[NDArray[np.float64]], optional): Initial value function. Defaults to None.
-        tol (float): tolerance
+        atol (float): Absolute tolerance
 
     Returns:
         NDArray[np.float64]: Optimal value function
@@ -73,7 +73,7 @@ def policy_iteration(
     policy_stable = False
     while not policy_stable:
         policy_stable = True
-        V = policy_evaluation(gamma, P, R, pi, V, tol)
+        V = policy_evaluation(gamma, P, R, pi, V, atol)
         Q = [[P[s,a] @ (R[s,a] + gamma * V) for a in range(NA)] for s in range(NS)]
         next_pi = np.argmax(Q, axis=1)
         

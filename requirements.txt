@@ -1,0 +1,15 @@
+cvxpy==1.2.2
+ecos==2.0.10
+jax==0.3.25
+jaxlib==0.3.25
+Mosek==10.0.31
+numpy==1.23.5
+opt-einsum==3.3.0
+osqp==0.6.2.post0
+pip==22.3.1
+qdldl==0.1.5.post2
+scipy==1.9.3
+scs==3.2.0
+setuptools==65.5.1
+typing_extensions==4.4.0
+wheel==0.38.4

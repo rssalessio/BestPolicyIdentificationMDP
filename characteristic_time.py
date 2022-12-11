@@ -1,10 +1,10 @@
 import numpy as np
 import numpy.typing as npt
-import torch
 import cvxpy as cp
-import math
+import jax.numpy as jnp
+from jax import grad, jit
 from utils import policy_iteration
-from typing import NamedTuple, List
+from typing import NamedTuple, List, Union, Literal, Optional, Dict
 from frank_wolfe import frank_wolfe
 from cvxpy.constraints.constraint import Constraint
 
@@ -121,7 +121,9 @@ def compute_characteristic_time_fw(
     P: npt.NDArray[np.float64],
     R: npt.NDArray[np.float64],
     with_navigation_constraints: bool = False,
-    atol: float = 1e-6) -> CharacteristicTime:
+    atol: float = 1e-6,
+    backend: Union[Literal['cpu'], Literal['gpu']] = 'cpu',
+    **solver_kwargs) -> CharacteristicTime:
     """
     Computes the optimal allocation $omega*$ in eq. (7) in 
     https://arxiv.org/pdf/2106.02847.pdf     
@@ -131,6 +133,8 @@ def compute_characteristic_time_fw(
         P (npt.NDArray[np.float64]): Transition function of shape SxAxS
         R (npt.NDArray[np.float64]): Reward function of shape SxAxS
         abs_tol (float, optional): absolute tolerance. Defaults to 1e-6.
+        backend (str, 'cpu' or 'gpu'): which backend to use to compute the gradients. Defaults to 'cpu'.
+        solver_kwargs (dict, optional): additional args to be passed to the Frank Wolfe algorithm.
 
     Returns:
         Allocation: an object of type Allocation that contains the results
@@ -140,13 +144,13 @@ def compute_characteristic_time_fw(
     
     x0 = np.ones((ns * na)) / (ns * na)
     gen_allocation = compute_generative_characteristic_time(discount_factor, P, R, atol)
-    idxs = torch.tensor([[False if pi[s] == a else True for a in range(na)] for s in range(ns)]).bool()
+    idxs = jnp.array([[False if pi[s] == a else True for a in range(na)] for s in range(ns)])
     idxs_pi = ~idxs
-    H = torch.tensor(gen_allocation.H)[idxs]
+    H = jnp.array(gen_allocation.H)[idxs]
 
-    def objective_function(x: torch.Tensor):
-        w = torch.reshape(x, (ns, na))
-        objective  = torch.max(H/w[idxs] + torch.max(gen_allocation.Hstar/ (ns * w[idxs_pi])))
+    def objective_function(x: jnp.ndarray):
+        w = jnp.reshape(x, (ns, na))
+        objective  = jnp.max(H/w[idxs] + jnp.max(gen_allocation.Hstar/ (ns * w[idxs_pi])))
         objective = 1/objective
         return -objective
 
@@ -157,14 +161,9 @@ def compute_characteristic_time_fw(
             [] if with_navigation_constraints is False else [cp.sum(w, axis=1) == P.reshape(ns*na, ns).T  @ x] )
         return constraints
 
-    def derivative_obj_fn(x: npt.NDArray[np.float64]):
-        x = torch.tensor(x, requires_grad=True, dtype=torch.double)
-        obj = objective_function(x)
-        obj.backward()
-        return x.grad.detach().numpy()
-
-    
-    x, res, k = frank_wolfe(ns * na, x0=x0, jac=derivative_obj_fn, build_constraints=build_constraints)
+    _derivative_obj_fn = jit(grad(objective_function), backend=backend)
+    derivative_obj_fn = lambda x: np.asarray(_derivative_obj_fn(x))
+    x, res, k = frank_wolfe(ns * na, x0=x0, jac=derivative_obj_fn, build_constraints=build_constraints, **solver_kwargs)
     
     print(f'Stopped at iteration {k}')
     return CharacteristicTime(

@@ -52,7 +52,8 @@ def frank_wolfe(
     for k in range(max_iter):
         current_x = next_x
         
-        # Compute gradient     
+        # Compute gradient
+        x.value = current_x
         grad_f.value = jac(current_x)
         
         # Solve problem

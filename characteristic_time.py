@@ -83,7 +83,7 @@ def compute_generative_characteristic_time(
     T2_1 = np.zeros_like(T1)
     T2_2 = np.zeros_like(T1)
     T1[idxs_subopt_actions] = 2 / delta_sq_subopt
-    T2_1[idxs_subopt_actions] = 16 * var_V[idxs_subopt_actions] / delta_sq_min
+    T2_1[idxs_subopt_actions] = 16 * var_V[idxs_subopt_actions] / delta_sq_subopt
     T2_2[idxs_subopt_actions] = 6 * span_V ** (4/3) / delta_sq_subopt ** 2/3
     T2 = np.maximum(T2_1, T2_2)
     
@@ -93,7 +93,7 @@ def compute_generative_characteristic_time(
         27 / (delta_sq_min * (1 -  discount_factor) ** 3),
         max(
             16 * var_max_V /  (delta_sq_min * (1 - discount_factor)**2),
-            6 * (span_V / discount_factor) ** (4/3)  * (1/delta_sq_min ** 2/3)
+            (6 / delta_sq_min ** 2/3) * (span_V / (1 - discount_factor)) ** (4/3)
         )
     )
     
@@ -142,7 +142,7 @@ def compute_characteristic_time_fw(
     ns, na = P.shape[:2]
     _, pi, _ = policy_iteration(discount_factor, P, R, atol=atol)
     
-    x0 = np.ones((ns * na)) / (ns * na)
+    x0 = np.random.dirichlet([1] * (ns*na)) #.reshape(ns, na)#np.ones((ns * na)) / (ns * na)
     gen_allocation = compute_generative_characteristic_time(discount_factor, P, R, atol)
     idxs = jnp.array([[False if pi[s] == a else True for a in range(na)] for s in range(ns)])
     idxs_pi = ~idxs
@@ -163,6 +163,7 @@ def compute_characteristic_time_fw(
 
     _derivative_obj_fn = jit(grad(objective_function), backend=backend)
     derivative_obj_fn = lambda x: np.asarray(_derivative_obj_fn(x))
+
     x, res, k = frank_wolfe(ns * na, x0=x0, jac=derivative_obj_fn, build_constraints=build_constraints, **solver_kwargs)
     
     print(f'Stopped at iteration {k}')
@@ -176,8 +177,11 @@ if __name__ == '__main__':
     np.set_printoptions(formatter={'float': lambda x: "{0:0.3f}".format(x)})
     ns, na = 5,3
     np.random.seed(2)
-    P = np.random.dirichlet([0.9, 0.5, 0.3, 0.1, 0.05], size=(ns, na))
-    R = np.random.dirichlet([0.9, 0.5, 0.3, 0.1, 0.05], size=(ns, na))
+    P = np.random.dirichlet(np.ones(ns), size=(ns, na))
+    R = np.random.dirichlet(np.ones(ns), size=(ns, na))
+    
+    print(P)
+    print(R)
     
     discount_factor = 0.99
     allocation = compute_generative_characteristic_time(discount_factor, P, R)

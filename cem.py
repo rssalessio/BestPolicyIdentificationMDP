@@ -4,7 +4,7 @@ import dirichlet
 from abc import ABC, abstractmethod
 from typing import Callable, List, Tuple
 from math import ceil
-from utils import is_positive_definite, is_symmetric, mean_cov
+from .utils import is_positive_definite, is_symmetric, mean_cov
 
 class Population(ABC):
     """

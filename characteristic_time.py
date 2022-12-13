@@ -3,12 +3,12 @@ import numpy.typing as npt
 import cvxpy as cp
 import jax.numpy as jnp
 from jax import grad, jit
-from utils import policy_iteration
+from .utils import policy_iteration
 from typing import NamedTuple, List, Union, Literal, Optional, Dict
-from frank_wolfe import frank_wolfe
+from .frank_wolfe import frank_wolfe
 from cvxpy.constraints.constraint import Constraint
-from pgd import pgd
-from cem import DirichletPopulation, optimize
+from .pgd import pgd
+from .cem import DirichletPopulation, optimize
 
 class CharacteristicTime(NamedTuple):
     """CharacteristicTime results
@@ -83,14 +83,14 @@ def compute_generative_characteristic_time(
     T1 = np.zeros((ns, na))
     T2_1 = np.zeros_like(T1)
     T2_2 = np.zeros_like(T1)
-    T1[idxs_subopt_actions] = 2 / delta_sq_subopt
-    T2_1[idxs_subopt_actions] = 16 * var_V[idxs_subopt_actions] / delta_sq_subopt
-    T2_2[idxs_subopt_actions] = 6 * span_V[idxs_subopt_actions] ** (4/3) / delta_sq_subopt ** 2/3
+    T1[idxs_subopt_actions] = np.nan_to_num(2 / delta_sq_subopt)
+    T2_1[idxs_subopt_actions] = np.nan_to_num(16 * var_V[idxs_subopt_actions] / delta_sq_subopt)
+    T2_2[idxs_subopt_actions] = np.nan_to_num(6 * span_V[idxs_subopt_actions] ** (4/3) / delta_sq_subopt ** 2/3)
     T2 = np.maximum(T2_1, T2_2)
     
-    T3 = 2 / (delta_sq_min * ((1 -  discount_factor) ** 2))
+    T3 = np.nan_to_num(2 / (delta_sq_min * ((1 -  discount_factor) ** 2)))
     
-    T4 = min(
+    T4 = np.nan_to_num(min(
         max(
             27 / (delta_sq_min * (1 -  discount_factor) ** 3),
              8 / (delta_sq_min * ((1-discount_factor) **2.5 )),
@@ -100,7 +100,7 @@ def compute_generative_characteristic_time(
             16 * var_max_V /  (delta_sq_min * (1 - discount_factor)**2),
             6 * (span_max_V/ ((delta_sq_min ** 2/3) * ((1-discount_factor) ** (4/3))))
         )
-    )
+    ))
     
     # Compute H and Hstar
     H = T1 + T2

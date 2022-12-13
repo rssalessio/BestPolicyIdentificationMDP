@@ -187,7 +187,6 @@ def compute_characteristic_time_fw(
     x = x.reshape(ns,na)
     res = np.max(gen_allocation.H[idxs]/x[idxs] + np.max(gen_allocation.Hstar/ (ns * x[~idxs])))
 
-    print(f'Stopped at iteration {k}')
     return CharacteristicTime(
         gen_allocation.T1, gen_allocation.T2, gen_allocation.T3, gen_allocation.T4, gen_allocation.H, gen_allocation.Hstar,
         x, res)
@@ -215,7 +214,7 @@ def cem_method(
     population = DirichletPopulation(np.ones(ns * na)/200)
     
     res, x, last_epoch = optimize(objective_function, population, 1000, threshold=3e-2, elite_fraction=0.1)
-    print(f'Stopped at epoch {last_epoch}')
+
     return CharacteristicTime(
         gen_allocation.T1, gen_allocation.T2, gen_allocation.T3, gen_allocation.T4, gen_allocation.H, gen_allocation.Hstar,
         x.reshape(ns,na), 1/res)

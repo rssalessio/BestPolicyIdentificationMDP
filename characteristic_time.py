@@ -109,7 +109,7 @@ def compute_generative_characteristic_time(
     # Compute allocation vector
     omega = np.copy(H)
     if np.isclose(H.sum(), 0, atol=0):
-        omega = 1 / (ns * na)
+        omega = np.ones((ns, na)) / (ns * na)
     else:
         omega[~idxs_subopt_actions] = np.sqrt(H.sum() * Hstar) / ns
         omega = omega / omega.sum()

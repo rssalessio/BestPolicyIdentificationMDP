@@ -83,12 +83,12 @@ def compute_generative_characteristic_time(
     T1 = np.zeros((ns, na))
     T2_1 = np.zeros_like(T1)
     T2_2 = np.zeros_like(T1)
-    T1[idxs_subopt_actions] = np.nan_to_num(2 / delta_sq_subopt)
-    T2_1[idxs_subopt_actions] = np.nan_to_num(16 * var_V[idxs_subopt_actions] / delta_sq_subopt)
-    T2_2[idxs_subopt_actions] = np.nan_to_num(6 * span_V[idxs_subopt_actions] ** (4/3) / delta_sq_subopt ** 2/3)
+    T1[idxs_subopt_actions] = np.nan_to_num(2 / delta_sq_subopt, nan=0, posinf=0, neginf=0)
+    T2_1[idxs_subopt_actions] = np.nan_to_num(16 * var_V[idxs_subopt_actions] / delta_sq_subopt, nan=0, posinf=0, neginf=0)
+    T2_2[idxs_subopt_actions] = np.nan_to_num(6 * span_V[idxs_subopt_actions] ** (4/3) / delta_sq_subopt ** 2/3, nan=0, posinf=0, neginf=0)
     T2 = np.maximum(T2_1, T2_2)
     
-    T3 = np.nan_to_num(2 / (delta_sq_min * ((1 -  discount_factor) ** 2)))
+    T3 = np.nan_to_num(2 / (delta_sq_min * ((1 -  discount_factor) ** 2)), nan=0, posinf=0, neginf=0)
     
     T4 = np.nan_to_num(min(
         max(
@@ -100,7 +100,7 @@ def compute_generative_characteristic_time(
             16 * var_max_V /  (delta_sq_min * (1 - discount_factor)**2),
             6 * (span_max_V/ ((delta_sq_min ** 2/3) * ((1-discount_factor) ** (4/3))))
         )
-    ))
+    ), nan=0, posinf=0, neginf=0)
     
     # Compute H and Hstar
     H = T1 + T2

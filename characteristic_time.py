@@ -108,8 +108,11 @@ def compute_generative_characteristic_time(
 
     # Compute allocation vector
     omega = np.copy(H)
-    omega[~idxs_subopt_actions] = np.sqrt(H.sum() * Hstar) / ns
-    omega = omega / omega.sum()
+    if np.isclose(H.sum(), 0, atol=0):
+        omega = 1 / (ns * na)
+    else:
+        omega[~idxs_subopt_actions] = np.sqrt(H.sum() * Hstar) / ns
+        omega = omega / omega.sum()
    
 
     # In eq (10) in http://proceedings.mlr.press/v139/marjani21a/marjani21a.pdf

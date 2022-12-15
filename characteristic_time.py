@@ -132,6 +132,7 @@ def compute_characteristic_time_fw(
     discount_factor: float,
     P: npt.NDArray[np.float64],
     R: npt.NDArray[np.float64],
+    x0: Optional[npt.NDArray[np.float64]] = None,
     with_navigation_constraints: bool = False,
     atol: float = 1e-6,
     max_iter: int = 1000,
@@ -154,9 +155,10 @@ def compute_characteristic_time_fw(
         Allocation: an object of type Allocation that contains the results
     """
     ns, na = P.shape[:2]
+    
     _, pi, _ = policy_iteration(discount_factor, P, R, atol=atol)
     
-    x0 = np.ones((ns * na)) / (ns * na)
+    x0 = x0 if x0 is not None else np.ones((ns * na)) / (ns * na)
     gen_allocation = compute_generative_characteristic_time(discount_factor, P, R, atol)
     idxs = jnp.array([[False if pi[s] == a else True for a in range(na)] for s in range(ns)])
     idxs_pi = ~idxs

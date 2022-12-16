@@ -3,12 +3,12 @@ import numpy.typing as npt
 import cvxpy as cp
 import jax.numpy as jnp
 from jax import grad, jit
-from .utils import policy_iteration
 from typing import NamedTuple, List, Union, Literal, Optional, Dict
-from .frank_wolfe import frank_wolfe
 from cvxpy.constraints.constraint import Constraint
-from .pgd import pgd
-from .cem import DirichletPopulation, optimize
+from BestPolicyIdentification.utils import policy_iteration
+from BestPolicyIdentification.frank_wolfe import frank_wolfe
+from BestPolicyIdentification.pgd import pgd
+from BestPolicyIdentification.cem import DirichletPopulation, optimize
 
 class CharacteristicTime(NamedTuple):
     """CharacteristicTime results

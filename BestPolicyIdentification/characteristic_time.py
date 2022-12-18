@@ -164,34 +164,61 @@ def compute_characteristic_time(
     idxs_pi = ~idxs
     H = jnp.array(gen_allocation.H)[idxs]
 
-    def objective_function(x: jnp.ndarray):
+    def objective_function(x: jnp.ndarray) -> float:
+        """Computes the objective function of the upper bound for a given allocation x
+
+        Parameters
+        ----------
+        x : jnp.ndarray
+            Allocation vector
+
+        Returns
+        -------
+        float
+            Log of the objective function
+        """        
         w = jnp.reshape(x, (ns, na))
         objective  = jnp.max(H/w[idxs] + jnp.max(gen_allocation.Hstar/ (ns * w[idxs_pi])))
         #objective = 1/objective
         return jnp.log(objective + 1)
 
     def build_constraints(x: cp.Variable) -> List[Constraint]:
+        """Build the constraints of the convex problem
+
+        Parameters
+        ----------
+        x : cp.Variable
+            allocation vector
+
+        Returns
+        -------
+        List[Constraint]
+            list of constraints
+        """        
         w = cp.reshape(x, (ns, na))
         constraints = [cp.sum(x) == 1, x>=0, x<=1]
         constraints.extend(
             [] if with_navigation_constraints is False else [cp.sum(w, axis=1) == P.reshape(ns*na, ns).T  @ x] )
         return constraints
 
+    # Function to compute the gradient of the objective function
     _derivative_obj_fn = jit(grad(objective_function), backend=backend)
     derivative_obj_fn = lambda x: np.asarray(_derivative_obj_fn(x))
     eval_fn = lambda x: np.asarray(objective_function(x))
 
+    # Choose between frank-wolfe and projected gradient descent
     if not use_pgd:
         x, res, k = frank_wolfe(ns * na, x0=x0, jac=derivative_obj_fn, build_constraints=build_constraints, max_iter=max_iter, **solver_kwargs)
     else:
         x, res, k = pgd(ns * na, x0=x0, eval_fn=eval_fn, jac=derivative_obj_fn, build_constraints=build_constraints, lr=1e-2, max_iter=max_iter, **solver_kwargs)
     
+    # Clip small and negative values
     x = np.clip(x.reshape(ns,na), a_min=1e-12, a_max=None)
     
+    # Compute value of the upper bound for the given allocation vector
     res = np.max(gen_allocation.H[idxs]/x[idxs] + np.max(gen_allocation.Hstar/ (ns * x[~idxs])))
     
-    
-
+    # Return result
     return CharacteristicTime(
         gen_allocation.T1, gen_allocation.T2, gen_allocation.T3, gen_allocation.T4, gen_allocation.H, gen_allocation.Hstar,
         x, res)
@@ -202,6 +229,25 @@ def cem_method(
     P: npt.NDArray[np.float64],
     R: npt.NDArray[np.float64],
     atol: float = 1e-6) -> CharacteristicTime:
+    """Computes the optimal allocation vector for the generative case
+    using the cross-entropy method (CEM)
+
+    Parameters
+    ----------
+    discount_factor : float
+        discount factor in (0,1)
+    P : npt.NDArray[np.float64]
+        Transition function, of the shape (S,A,S)
+    R : npt.NDArray[np.float64]
+        Reward function, of the shape (S,a,S)
+    atol : float, optional
+        absolute tolerance, by default 1e-6
+
+    Returns
+    -------
+    CharacteristicTime
+        Returns a CharacteristicTime object containing the results
+    """    
     ns, na = P.shape[:2]
     _, pi, _ = policy_iteration(discount_factor, P, R, atol=atol)
     

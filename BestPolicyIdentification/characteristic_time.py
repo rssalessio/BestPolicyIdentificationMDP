@@ -128,7 +128,7 @@ def compute_generative_characteristic_time(
 
     return CharacteristicTime(T1, T2, T3, T4, H, Hstar, omega, U)
 
-def compute_characteristic_time_fw(
+def compute_characteristic_time(
     discount_factor: float,
     P: npt.NDArray[np.float64],
     R: npt.NDArray[np.float64],
@@ -186,8 +186,11 @@ def compute_characteristic_time_fw(
     else:
         x, res, k = pgd(ns * na, x0=x0, eval_fn=eval_fn, jac=derivative_obj_fn, build_constraints=build_constraints, lr=1e-2, max_iter=max_iter, **solver_kwargs)
     
-    x = x.reshape(ns,na)
+    x = np.clip(x.reshape(ns,na), a_min=1e-12, a_max=None)
+    
     res = np.max(gen_allocation.H[idxs]/x[idxs] + np.max(gen_allocation.Hstar/ (ns * x[~idxs])))
+    
+    
 
     return CharacteristicTime(
         gen_allocation.T1, gen_allocation.T2, gen_allocation.T3, gen_allocation.T4, gen_allocation.H, gen_allocation.Hstar,
@@ -239,18 +242,18 @@ if __name__ == '__main__':
     print(allocation.omega)
     print(allocation.U)
     
-    allocation = compute_characteristic_time_fw(discount_factor, P, R, use_pgd=False, max_iter=100)
+    allocation = compute_characteristic_time(discount_factor, P, R, use_pgd=False, max_iter=100)
     print(allocation.omega)
     print(allocation.U)
     
-    allocation = compute_characteristic_time_fw(discount_factor, P, R, use_pgd=True)
+    allocation = compute_characteristic_time(discount_factor, P, R, use_pgd=True)
     print(allocation.omega)
     print(allocation.U)
     
-    allocation = compute_characteristic_time_fw(discount_factor, P, R, with_navigation_constraints=True, use_pgd=False, max_iter=100)
+    allocation = compute_characteristic_time(discount_factor, P, R, with_navigation_constraints=True, use_pgd=False, max_iter=100)
     print(allocation.omega)
     print(allocation.U)
     
-    allocation = compute_characteristic_time_fw(discount_factor, P, R, with_navigation_constraints=True, use_pgd=True)
+    allocation = compute_characteristic_time(discount_factor, P, R, with_navigation_constraints=True, use_pgd=True)
     print(allocation.omega)
     print(allocation.U)

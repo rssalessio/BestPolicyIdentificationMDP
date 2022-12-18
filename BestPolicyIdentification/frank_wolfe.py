@@ -59,9 +59,13 @@ def frank_wolfe(
         # Solve problem
         res = problem.solve(warm_start=True, verbose=verbose, solver=solver)
         
+        if x.value is None:
+            break
+        
         # Compute next iterate
         alpha = 2 / (k + 2)
 
+        
         next_x = current_x + alpha * (x.value - current_x)
 
         if callback is not None:

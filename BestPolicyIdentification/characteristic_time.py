@@ -67,9 +67,9 @@ def compute_generative_characteristic_time(
     idxs_subopt_actions = np.array([[False if pi[s] == a else True for a in range(na)] for s in range(ns)])
 
     # Compute Delta
-    delta_sq = (V[:, np.newaxis] - Q) ** 2
+    delta_sq = np.clip((V[:, np.newaxis] - Q) ** 2, a_min=1e-16, a_max=None)
     delta_sq_subopt = delta_sq[idxs_subopt_actions]
-    delta_sq_min = max(1e-16, delta_sq_subopt.min())
+    delta_sq_min =  delta_sq_subopt.min()
     
     # Compute variance of V, VarMax and Span
     avg_V = P @ V
@@ -93,8 +93,8 @@ def compute_generative_characteristic_time(
     T4 = np.nan_to_num(min(
         max(
             27 / (delta_sq_min * (1 -  discount_factor) ** 3),
-             8 / (delta_sq_min * ((1-discount_factor) **2.5 )),
-             14 * (span_max_V/((delta_sq_min ** 2/3) * ((1 - discount_factor)**(4/3))))
+             8 / (delta_sq_min * ((1-discount_factor) ** 2.5 )),
+             14 * (span_max_V/((delta_sq_min ** 2/3) * ((1 - discount_factor) ** (4/3))))
         ),
         max(
             16 * var_max_V /  (delta_sq_min * (1 - discount_factor)**2),
@@ -127,6 +127,7 @@ def compute_generative_characteristic_time(
     U = np.max(H[idxs_subopt_actions]/omega[idxs_subopt_actions] + np.max(Hstar/ (ns * omega[~idxs_subopt_actions])))
 
     return CharacteristicTime(T1, T2, T3, T4, H, Hstar, omega, U)
+
 
 def compute_characteristic_time(
     discount_factor: float,

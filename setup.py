@@ -4,7 +4,7 @@ from os import path
 
 setup(name = 'BestPolicyIdentificationMDP',
     packages=find_packages(),
-    version = '0.0.1',
+    version = '0.0.2',
     description = 'Python library for Best Policy Identification',
     url = 'https://github.com/rssalessio/BestPolicyIdentificationMDP',
     author = 'Alessio Russo',

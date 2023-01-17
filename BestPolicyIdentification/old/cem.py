@@ -1,8 +1,10 @@
 from __future__ import annotations
 import numpy as np
+import cvxpy as cp
 import dirichlet
 from abc import ABC, abstractmethod
-from typing import Callable, List, Tuple
+from cvxpy.constraints.constraint import Constraint
+from typing import Callable, List, Tuple, Optional
 from math import ceil
 from BestPolicyIdentification.utils import is_positive_definite, is_symmetric, mean_cov
 
@@ -55,10 +57,21 @@ class DirichletPopulation(Population):
         # Sample a number of points from the population
         return np.random.dirichlet(self.coefficients, size=(num_points,))
 
-    def update(self, elite_results: List[Tuple[float, np.ndarray]], smoothed_update: float = 0.5, regularization: float = 1e-3):
+    def update(self, elite_results: List[Tuple[float, np.ndarray]], smoothed_update: float = 0.5, regularization: float = 1e-2):
         # Update the population according to the results
         results, points = list(zip(*elite_results))
-        new_coeff = dirichlet.mle(np.array(points), method='meanprecision', maxiter=15000)
+        original_points = np.array(points)
+        points = original_points.copy()
+        for i in range(1000):
+            try:
+                new_coeff = dirichlet.mle(np.array(points), method='meanprecision', maxiter=15000)
+                break
+            except Exception as e:
+                if i == 999:
+                    raise Exception('Cannot find a set of feasible points')
+                num = np.random.randint(2, len(original_points))
+                points = original_points[np.random.choice(range(len(original_points)), num)]
+                
         self.coefficients = (1 - smoothed_update) * self.coefficients + smoothed_update * (
             new_coeff + regularization * np.ones(self.dim))
 
@@ -112,7 +125,8 @@ def evaluate_population(
     fun: Callable[[np.ndarray], float],
     population: Population,
     num_points: int,
-    elite_fraction: float = 0.2) -> Tuple[Population, List[Tuple[float, np.ndarray]]]:
+    elite_fraction: float = 0.2,
+    build_constraints: Optional[Callable[[cp.Variable], List[Constraint]]] = None) -> Tuple[Population, List[Tuple[float, np.ndarray]]]:
     """Evaluate a population on a function and updates the population according to the 
     best results
 
@@ -130,6 +144,21 @@ def evaluate_population(
 
     # Sample population
     points = population.sample(num_points)
+    
+    if build_constraints:
+        x = cp.Variable(population.dim)
+        y = cp.Parameter(population.dim)
+        objective = 0.5 * (cp.norm(x - y, p = 2) ** 2)
+        
+        constraints = build_constraints(x)
+        problem = cp.Problem(cp.Minimize(objective), constraints)
+        
+        def _fun(z):
+            y.value = z
+            res = problem.solve()
+            return x.value
+        points = list(map(_fun, points))
+
 
     # Evaluate points
     results = list(map(fun, points))
@@ -153,7 +182,9 @@ def optimize(
     max_iterations: int = 1000,
     rtol: float = 1e-4,
     elite_fraction: float = 0.2,
-    threshold: float = 1e-2) -> Tuple[float, np.ndarray]:
+    threshold: float = 1e-2,
+    build_constraints: Optional[Callable[[cp.Variable], List[Constraint]]] = None
+    ) -> Tuple[float, np.ndarray]:
     """Optimize a function using the CEM method
 
     Args:
@@ -176,9 +207,9 @@ def optimize(
 
     for epoch in range(max_iterations):
         # Evaluate and update population
-        population, results = evaluate_population(fun, population, num_points=num_points, elite_fraction=elite_fraction)
+        population, results = evaluate_population(fun, population, num_points=num_points, elite_fraction=elite_fraction, build_constraints=build_constraints)
         _best = results[-1]
-        
+
         # Check if the results have improved
         if _best[0] > best_result:
             prev_best_result = best_result

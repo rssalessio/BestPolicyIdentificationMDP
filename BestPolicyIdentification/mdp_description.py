@@ -134,7 +134,6 @@ class MDPDescription(object):
 
         return omega
 
-    
     def evaluate_allocation(self, omega: npt.NDArray[np.float64], navigation_constraints: bool = False) -> float:
         # In eq (10) in http://proceedings.mlr.press/v139/marjani21a/marjani21a.pdf
         # the authors claim that is 2*(sum(H) + Hstar), however, from results it seems like
@@ -144,15 +143,16 @@ class MDPDescription(object):
         # This comes from the code of the original paper, even though corollary 1 has not the following form
         # _U2 = (H.sum() + Hstar + 2*np.sqrt(H.sum() * Hstar) )
         if navigation_constraints is True:
-            checks = np.abs(np.array([np.sum(omega[s]) - np.sum(np.multiply(self.P[:,:,s], omega)) for s in range(self.dim_state)]))
-            assert checks.min() < 1e-5, "Allocation does not satisfy navigation constraints"
-        
-        H = self.H / self.normalizer
-        Hstar = (self.T3 + self.T4) / self.normalizer
+            checks = np.abs(np.array([np.sum(omega[s]) - np.sum(np.multiply(self.P[:,:,s], omega)) for s in range(self.dim_state)])) 
+            assert checks.max() < 1e-5, "Allocation does not satisfy navigation constraints"
+
+        H = self.H * self.normalizer
+        Hstar = (self.T3 + self.T4) * self.normalizer
+
         U = np.max(
             H[self.idxs_subopt_actions].reshape(self.dim_state, self.dim_action-1)/omega[self.idxs_subopt_actions].reshape(self.dim_state, self.dim_action-1)) \
                 + np.max(Hstar/ (omega[~self.idxs_subopt_actions]))
-        return U * self.normalizer
+        return U / self.normalizer
 
     def compute_allocation(self, navigation_constraints: bool = False) -> Tuple[npt.NDArray[np.float64], float]:
         if navigation_constraints is False:
@@ -179,6 +179,8 @@ if __name__ == '__main__':
     discount_factor = 0.99
     
     mdp = MDPDescription(P, R, discount_factor)
-    
-    print(mdp.compute_allocation())
-    print(mdp.compute_allocation(True))
+    #print(mdp._slsqp(navigation_constraints=True))
+    print(mdp.compute_allocation()[1])
+    print(mdp.compute_allocation(True)[1])
+    omega_gen = mdp.compute_allocation()[0]
+    omega_nav_constr = mdp.compute_allocation(True)[0]

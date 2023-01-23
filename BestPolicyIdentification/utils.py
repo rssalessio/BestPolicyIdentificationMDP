@@ -1,6 +1,8 @@
 import numpy as np
+import cvxpy as cp
+from cvxpy.constraints.constraint import Constraint
 from numpy.typing import NDArray
-from typing import Optional, Tuple
+from typing import Optional, Tuple, List, Callable
 from scipy.linalg._fblas import dger, dgemm
 
 
@@ -84,8 +86,33 @@ def policy_iteration(
 
     return V, pi, Q
 
+def project_omega(
+        x: NDArray[np.float64],
+        P: NDArray[np.float64],
+        tol: float=1e-2) -> NDArray[np.float64]:
+    """Project omega using navigation constraints
 
+    Parameters
+    ----------
+    x : NDArray[np.float64]
+        Allocation vector to project
+    P : NDArray[np.float64]
+        Transition matrix (S,A,S)
 
+    Returns
+    -------
+    NDArray[np.float64]
+        The projected allocation vector
+    """
+    assert tol < 1 and tol >0, 'Tolerance needs to be in (0,1)'
+    ns, na = P.shape[:2]
+    omega = cp.Variable((ns, na), nonneg=True)
+    constraints = [cp.sum(omega) == 1, omega >= tol]
+    constraints.extend([cp.sum(omega[s]) == cp.sum(cp.multiply(P[:,:,s], omega)) for s in range(ns)])
+    problem = cp.Problem(cp.Minimize(cp.norm(x - omega)), constraints)
+    res = problem.solve(verbose=False)
+    #print(f'res: {res}')
+    return omega.value
 
 def is_positive_definite(x: np.ndarray, atol: float = 1e-9) -> bool:
     """Check if a matrix is positive definite
